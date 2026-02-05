@@ -3,196 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jekyll 文章撰寫介面</title>
-    <!-- 載入 Tailwind CSS -->
+    <title>Jekyll 文章撰寫介面 - 即時預覽版</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入解析 Markdown 的函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <style>
-        /* 使用 Inter 字體 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        
         body { font-family: 'Inter', sans-serif; }
-        /* 調整 textarea/input 焦點樣式 */
-        .input-focus:focus {
-            border-color: #3b82f6; /* blue-500 */
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* blue-500 with opacity */
-        }
-        /* 隱藏 datetime-local 的秒數和時區顯示 */
-        input[type="datetime-local"]::-webkit-datetime-edit-second-field { display: none; }
-        input[type="datetime-local"]::-webkit-datetime-edit-millisecond-field { display: none; }
+        
+        /* 預覽區域的 Markdown 樣式（類 GitHub 效果） */
+        .prose h1 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; font-size: 2em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
+        .prose h2 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; font-size: 1.5em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
+        .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
+        .prose p { margin-top: 0; margin-bottom: 16px; line-height: 1.6; }
+        .prose ul, .prose ol { padding-left: 2em; margin-bottom: 16px; }
+        .prose ul { list-style-type: disc; }
+        .prose ol { list-style-type: decimal; }
+        .prose code { background-color: rgba(27,31,35,.05); border-radius: 3px; font-size: 85%; margin: 0; padding: .2em .4em; font-family: monospace; }
+        .prose pre { background-color: #f6f8fa; border-radius: 3px; line-height: 1.45; overflow: auto; padding: 16px; margin-bottom: 16px; }
+        .prose blockquote { border-left: .25em solid #dfe2e5; color: #6a737d; padding: 0 1em; margin-bottom: 16px; }
+        .prose img { max-width: 100%; box-sizing: content-box; background-color: #fff; }
+
+        /* 隱藏滾動條但保持功能（選用） */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 sm:p-8">
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden">
 
-    <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-2xl">
-        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-2">Jekyll 文章撰寫工具</h1>
-        <p class="text-gray-500 mb-8">填寫下列欄位，將自動產生符合 Jekyll 規範的 Markdown 文件，包含 YAML Front Matter。</p>
+    <!-- 頂部導覽列 -->
+    <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800">Jekyll Writer <span class="text-sm font-normal text-slate-400 ml-2">v2.0</span></h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="generateAndDownloadPost()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center shadow-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                下載 Markdown
+            </button>
+        </div>
+    </header>
 
-        <!-- 標題輸入 -->
-        <div class="mb-6">
-            <label for="postTitle" class="block text-sm font-medium text-gray-700 mb-2">文章標題 (title)</label>
-            <input type="text" id="postTitle" placeholder="輸入您的文章標題..."
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition duration-150 ease-in-out">
+    <!-- 主要內容區：拆分為資訊與編輯 -->
+    <main class="flex flex-1 overflow-hidden">
+        
+        <!-- 左側面板：編輯與設定 -->
+        <div class="w-1/2 flex flex-col border-r border-slate-200 bg-white">
+            <!-- 資訊填寫區 -->
+            <div class="p-4 border-b border-slate-100 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">文章標題 (Title)</label>
+                        <input type="text" id="postTitle" placeholder="我的新文章..." class="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">發布日期 (Date)</label>
+                        <input type="datetime-local" id="publishDate" class="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 編輯器 -->
+            <div class="flex-1 relative">
+                <label class="absolute top-2 left-4 text-[10px] font-bold text-slate-300 uppercase z-10">Markdown Editor</label>
+                <textarea id="postContent" 
+                    class="w-full h-full p-6 pt-10 outline-none resize-none font-mono text-sm leading-relaxed text-slate-700 custom-scrollbar" 
+                    placeholder="# 開始撰寫文章內容..."
+                    oninput="updatePreview()"></textarea>
+            </div>
         </div>
 
-        <!-- 發布時間輸入 -->
-        <div class="mb-6">
-            <label for="publishDate" class="block text-sm font-medium text-gray-700 mb-2">發布時間 (date)</label>
-            <input type="datetime-local" id="publishDate"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition duration-150 ease-in-out">
-            <p class="text-xs text-gray-500 mt-1">此時間將用於 Front Matter 中的 `date` 欄位及檔案命名。</p>
+        <!-- 右側面板：即時預覽 -->
+        <div class="w-1/2 bg-white flex flex-col">
+            <div class="p-4 border-b border-slate-100 flex items-center">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">即時預覽 (Live Preview)</span>
+            </div>
+            <div id="previewArea" class="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white">
+                <div id="previewContent" class="prose max-w-none text-slate-800">
+                    <!-- Markdown 渲染結果會顯示在這裡 -->
+                </div>
+            </div>
         </div>
+    </main>
 
-        <!-- 內容輸入 -->
-        <div class="mb-8">
-            <label for="postContent" class="block text-sm font-medium text-gray-700 mb-2">文章內容 (Markdown)</label>
-            <textarea id="postContent" rows="15" placeholder="請在此輸入您的文章內容，支援 Markdown 格式..."
-                      class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus transition duration-150 ease-in-out"></textarea>
-        </div>
-
-        <!-- 產生按鈕 -->
-        <button id="generateButton" onclick="generateAndDownloadPost()"
-                class="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-            產生並下載 Markdown 檔案
-        </button>
-
-        <!-- 訊息顯示區 -->
-        <div id="messageArea" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
-    </div>
+    <!-- 訊息提示 -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 bg-slate-800 text-white rounded-full text-sm shadow-xl opacity-0 transition-opacity pointer-events-none duration-300 z-50"></div>
 
     <script>
-        // 設定時區偏移量 (台灣為 UTC+8)
         const TIMEZONE_OFFSET = "+0800";
-        // 訊息區元素
-        const messageArea = document.getElementById('messageArea');
+        const postTitle = document.getElementById('postTitle');
+        const publishDate = document.getElementById('publishDate');
+        const postContent = document.getElementById('postContent');
+        const previewContent = document.getElementById('previewContent');
+        const toast = document.getElementById('toast');
 
-        /**
-         * 頁面載入時，將日期時間輸入欄位設定為當前時間。
-         */
+        // 初始化日期
         window.onload = function() {
             const now = new Date();
-            // 由於 datetime-local 格式要求 'YYYY-MM-DDTHH:MM'，需要手動格式化
-            const offset = now.getTimezoneOffset() * 60000; // 轉換成分鐘，再轉成毫秒
+            const offset = now.getTimezoneOffset() * 60000;
             const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
-            document.getElementById('publishDate').value = localISOTime;
+            publishDate.value = localISOTime;
+            updatePreview();
         }
 
-        /**
-         * 顯示訊息（成功或錯誤）
-         * @param {string} msg - 訊息內容
-         * @param {string} type - 訊息類型 ('success' or 'error')
-         */
-        function displayMessage(msg, type) {
-            messageArea.textContent = msg;
-            messageArea.className = `mt-4 p-3 rounded-lg text-sm ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
-            messageArea.style.display = 'block';
+        // 即時預覽功能
+        function updatePreview() {
+            const content = postContent.value;
+            // 如果內容為空，顯示提示訊息
+            if (!content.trim()) {
+                previewContent.innerHTML = '<p class="text-slate-300 italic">預覽內容將顯示在此...</p>';
+                return;
+            }
+            // 使用 marked 渲染 Markdown
+            previewContent.innerHTML = marked.parse(content);
         }
 
-        /**
-         * 將標題轉換為適合檔案名稱的 slug (簡寫)
-         * @param {string} title - 文章標題
-         * @returns {string} - 簡寫字串
-         */
+        // 顯示通知
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 3000);
+        }
+
+        // Slugify 邏輯
         function slugify(title) {
-            // 轉換為小寫
-            let slug = title.toLowerCase();
-
-            // 移除前後空白
-            slug = slug.trim();
-
-            // 移除所有標點符號，但保留連字符 (hyphen) 和空格
-            slug = slug.replace(/[^\w\s-]/g, '');
-
-            // 將所有空格、底線或連字符替換為單一連字符
-            slug = slug.replace(/[\s_-]+/g, '-');
-
-            // 確保 slug 不以連字符開頭或結尾
-            slug = slug.replace(/^-+|-+$/g, '');
-
-            return slug;
+            return title.toLowerCase().trim()
+                .replace(/[^\w\s-]/g, '')
+                .replace(/[\s_-]+/g, '-')
+                .replace(/^-+|-+$/g, '');
         }
 
-        /**
-         * 格式化日期為 Jekyll Front Matter 所需的字串
-         * 格式: YYYY-MM-DD HH:MM:SS +0800
-         * @param {Date} dateObj - Date 物件
-         * @returns {string} - 格式化後的日期時間字串
-         */
+        // 格式化日期
         function formatJekyllDate(dateObj) {
-            const pad = (num) => num.toString().padStart(2, '0');
-
-            const year = dateObj.getFullYear();
-            const month = pad(dateObj.getMonth() + 1);
-            const day = pad(dateObj.getDate());
-
-            const hours = pad(dateObj.getHours());
-            const minutes = pad(dateObj.getMinutes());
-            const seconds = pad(dateObj.getSeconds());
-
-            // Jekyll Front Matter date format
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${TIMEZONE_OFFSET}`;
+            const pad = (n) => n.toString().padStart(2, '0');
+            return `${dateObj.getFullYear()}-${pad(dateObj.getMonth()+1)}-${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:00 ${TIMEZONE_OFFSET}`;
         }
 
-        /**
-         * 產生並下載 Jekyll Markdown 文件
-         */
+        // 下載檔案
         function generateAndDownloadPost() {
-            messageArea.style.display = 'none'; // 隱藏之前的訊息
+            const titleVal = postTitle.value.trim();
+            const dateVal = publishDate.value;
+            const contentVal = postContent.value;
 
-            const title = document.getElementById('postTitle').value.trim();
-            const dateInput = document.getElementById('publishDate').value;
-            const content = document.getElementById('postContent').value;
+            if (!titleVal) { showToast('請填寫標題'); return; }
 
-            if (!title) {
-                displayMessage('錯誤：請輸入文章標題。', 'error');
-                return;
-            }
+            const dateObj = new Date(dateVal);
+            const jekyllDate = formatJekyllDate(dateObj);
+            const dateStr = jekyllDate.substring(0, 10);
+            const slug = slugify(titleVal) || 'new-post';
 
-            if (!dateInput) {
-                displayMessage('錯誤：請選擇發布時間。', 'error');
-                return;
-            }
-
-            // 1. 處理日期
-            // dateInput 格式為 'YYYY-MM-DDTHH:MM' (本地時間)
-            const dateObj = new Date(dateInput);
-
-            // 格式化 Front Matter 的日期
-            const frontMatterDate = formatJekyllDate(dateObj);
-
-            // 格式化檔案名稱的日期 (僅 YYYY-MM-DD)
-            const dateForFilename = frontMatterDate.substring(0, 10);
-
-            // 2. 處理 Slug
-            const slug = slugify(title);
-
-            // 3. 建立 Front Matter
-            const frontMatter = `---
+            const fileContent = `---
 layout: post
-title: "${title.replace(/"/g, '\\"')}"
-date: ${frontMatterDate}
+title: "${titleVal.replace(/"/g, '\\"')}"
+date: ${jekyllDate}
 ---
 
-`; // 確保 Front Matter 後有兩個換行符
+${contentVal}`;
 
-            // 4. 組合文件內容
-            const fileContent = frontMatter + content;
-
-            // 5. 確定檔案名稱
-            const filename = `${dateForFilename}-${slug}.md`;
-
-            // 6. 下載檔案
+            const filename = `${dateStr}-${slug}.md`;
             const blob = new Blob([fileContent], { type: 'text/markdown;charset=utf-8' });
-
-            // 創建一個虛擬連結
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = filename;
-
-            // 觸發下載
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
 
-            displayMessage(`成功！檔案 "${filename}" 已產生並下載。`, 'success');
+            showToast(`已下載：${filename}`);
         }
     </script>
 </body>

@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jekyll 文章撰寫介面 - v3.0</title>
+    <title>Jekyll 文章撰寫介面 - v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
     <script>
-        // 設定 Tailwind 配置以支援 class 切換深色模式
         tailwind.config = {
             darkMode: 'class',
         }
@@ -15,62 +14,69 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s; }
         
-        /* 預覽區域樣式 - 淺色 */
-        .prose { transition: color 0.3s; }
+        /* Markdown 預覽樣式 */
         .prose h1 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; font-size: 2em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
         .prose h2 { border-bottom: 1px solid #eaecef; padding-bottom: .3em; font-size: 1.5em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
-        .prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
-        .prose p { margin-top: 0; margin-bottom: 16px; line-height: 1.6; }
-        .prose ul { list-style-type: disc; padding-left: 2em; margin-bottom: 16px; }
-        .prose ol { list-style-type: decimal; padding-left: 2em; margin-bottom: 16px; }
+        .prose p { margin-bottom: 16px; line-height: 1.6; }
         .prose code { background-color: rgba(27,31,35,.05); border-radius: 3px; font-size: 85%; padding: .2em .4em; font-family: monospace; }
+        .dark .prose code { background-color: rgba(255,255,255,.1); }
         .prose pre { background-color: #f6f8fa; border-radius: 3px; padding: 16px; overflow: auto; margin-bottom: 16px; }
         .dark .prose pre { background-color: #1e293b; color: #e2e8f0; }
-        .dark .prose code { background-color: rgba(255,255,255,.1); }
-        .dark .prose h1, .dark .prose h2 { border-bottom-color: #334155; }
+
+        /* 分隔線樣式 */
+        #resizer {
+            width: 4px;
+            cursor: col-resize;
+            transition: background-color 0.2s;
+        }
+        #resizer:hover, .resizing #resizer {
+            background-color: #3b82f6 !important;
+        }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* 防止拖移時選取文字 */
+        .resizing {
+            cursor: col-resize;
+            user-select: none;
+        }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 h-screen flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+<body class="bg-slate-50 dark:bg-slate-900 h-screen flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 transition-colors duration-300">
 
     <!-- 頂部導覽列 -->
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm transition-colors">
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm z-20">
         <div class="flex items-center space-x-3">
             <div class="bg-blue-600 p-2 rounded-lg">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             </div>
             <div class="flex items-baseline space-x-2">
                 <h1 class="text-xl font-bold">Jekyll Writer</h1>
-                <span class="text-xs font-medium text-slate-400 dark:text-slate-500">v3.0</span>
+                <span class="text-xs font-medium text-slate-400 dark:text-slate-500">v3.1</span>
             </div>
             
-            <!-- 深色模式切換按鈕 -->
             <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus:outline-none" title="切換深淺模式">
-                <!-- 太陽圖示 -->
                 <svg id="sun-icon" class="w-5 h-5 text-amber-500 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
-                <!-- 月亮圖示 -->
                 <svg id="moon-icon" class="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
             </button>
         </div>
 
-        <div class="flex items-center space-x-4">
-            <button onclick="generateAndDownloadPost()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center shadow-sm">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                下載 Markdown
-            </button>
-        </div>
+        <button onclick="generateAndDownloadPost()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center shadow-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            下載 Markdown
+        </button>
     </header>
 
-    <main class="flex flex-1 overflow-hidden">
-        <!-- 左側編輯區 -->
-        <div class="w-1/2 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors">
-            <div class="p-4 border-b border-slate-100 dark:border-slate-700 space-y-4">
+    <!-- 主要容器 -->
+    <main id="container" class="flex flex-1 overflow-hidden relative">
+        
+        <!-- 左側：編輯區 -->
+        <div id="left-panel" class="flex flex-col bg-white dark:bg-slate-800 transition-colors" style="width: 50%;">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-700 space-y-4 shrink-0">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">文章標題</label>
@@ -82,7 +88,7 @@
                     </div>
                 </div>
             </div>
-            <div class="flex-1 relative">
+            <div class="flex-1 relative overflow-hidden">
                 <textarea id="postContent" 
                     class="w-full h-full p-6 outline-none resize-none font-mono text-sm leading-relaxed bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 custom-scrollbar transition-colors" 
                     placeholder="# 開始在此撰寫您的文章..."
@@ -90,8 +96,11 @@
             </div>
         </div>
 
-        <!-- 右側預覽區 -->
-        <div class="w-1/2 bg-white dark:bg-slate-900 flex flex-col transition-colors">
+        <!-- 中間：分隔線 -->
+        <div id="resizer" class="bg-slate-200 dark:bg-slate-700"></div>
+
+        <!-- 右側：預覽區 -->
+        <div id="right-panel" class="bg-white dark:bg-slate-900 flex flex-col transition-colors flex-1">
             <div id="previewArea" class="flex-1 overflow-y-auto p-10 custom-scrollbar">
                 <div id="previewContent" class="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
                     <!-- 渲染結果 -->
@@ -110,15 +119,42 @@
         const publishDate = document.getElementById('publishDate');
         const postContent = document.getElementById('postContent');
         const previewContent = document.getElementById('previewContent');
+        
+        // 拖移調整大小邏輯
+        const leftPanel = document.getElementById('left-panel');
+        const resizer = document.getElementById('resizer');
+        const container = document.getElementById('container');
+
+        resizer.addEventListener('mousedown', (e) => {
+            document.body.classList.add('resizing');
+            
+            const onMouseMove = (e) => {
+                const containerWidth = container.offsetWidth;
+                let newLeftWidth = (e.clientX / containerWidth) * 100;
+                
+                // 限制最小寬度
+                if (newLeftWidth < 15) newLeftWidth = 15;
+                if (newLeftWidth > 85) newLeftWidth = 85;
+                
+                leftPanel.style.width = `${newLeftWidth}%`;
+            };
+
+            const onMouseUp = () => {
+                document.body.classList.remove('resizing');
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
 
         window.onload = function() {
-            // 初始化時間
             const now = new Date();
             const offset = now.getTimezoneOffset() * 60000;
             const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
             publishDate.value = localISOTime;
             
-            // 檢查使用者上次的模式偏好
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
                 updateIcons(true);
